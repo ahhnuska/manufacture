@@ -1,59 +1,212 @@
-import { FabricDetails, Accessories, AccessoryItem, GAUZA_IN_INCHES, ProductCost } from './types';
+import {
+  AccessoryRow,
+  BagMeasurements,
+  CostMode,
+  FabricGroup,
+  FabricPart,
+  ProductCost,
+  PurchaseUnit,
+  PURCHASE_UNIT_INCHES,
+} from './types';
 
-export function calculateGauzaNeeded(
-  length: number,
-  width: number,
-  height: number,
-  wastagePercent: number,
-  fabricWidth: number = 44
-): number {
-  const front = length * height;
-  const back = length * height;
-  const sides = width * height * 2;
-  const bottom = length * width;
-
-  const totalArea = front + back + sides + bottom;
-
-  const fabricLength = totalArea / fabricWidth;
-
-  const fabricLengthWithWastage = fabricLength * (1 + wastagePercent / 100);
-
-  const gauzaNeeded = fabricLengthWithWastage / GAUZA_IN_INCHES;
-
-  return Math.ceil(gauzaNeeded * 100) / 100;
+function roundToTwoDecimals(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
-export function calculateFabricCost(
-  gauzaNeeded: number,
-  pricePerGauza: number
-): number {
-  return gauzaNeeded * pricePerGauza;
+function ceilToTwoDecimals(value: number): number {
+  return Math.ceil(value * 100) / 100;
 }
 
-export function calculateAccessoriesCost(accessories: Accessories): number {
-  let total = 0;
-  
-  if (accessories.chains.enabled) total += accessories.chains.total;
-  if (accessories.buckles.enabled) total += accessories.buckles.total;
-  if (accessories.dLocks.enabled) total += accessories.dLocks.total;
-  if (accessories.gum.enabled) total += accessories.gum.total;
-  if (accessories.flaps.enabled) total += accessories.flaps.total;
-  
-  for (const other of accessories.others) {
-    if (other.enabled) total += other.total;
+export function createEmptyBagMeasurements(
+  overrides: Partial<BagMeasurements> = {}
+): BagMeasurements {
+  return {
+    length: 0,
+    width: 0,
+    height: 0,
+    ...overrides,
+  };
+}
+
+export function generateId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+export function purchaseUnitToInches(unit: PurchaseUnit): number {
+  return PURCHASE_UNIT_INCHES[unit];
+}
+
+export function calculateFabricPart(part: FabricPart): FabricPart {
+  const length = Math.max(0, part.lengthInInches);
+  const width = Math.max(0, part.widthInInches);
+  const quantity = Math.max(0, part.quantity);
+
+  return {
+    ...part,
+    lengthInInches: length,
+    widthInInches: width,
+    quantity,
+    partArea: roundToTwoDecimals(length * width * quantity),
+  };
+}
+
+export function createBagPartsFromMeasurements(
+  measurements: BagMeasurements
+): FabricPart[] {
+  const { length, width, height } = measurements;
+
+  return [
+    createEmptyFabricPart({
+      name: 'Front Panel',
+      note: 'Auto from bag size',
+      lengthInInches: length,
+      widthInInches: height,
+      quantity: 1,
+    }),
+    createEmptyFabricPart({
+      name: 'Back Panel',
+      note: 'Auto from bag size',
+      lengthInInches: length,
+      widthInInches: height,
+      quantity: 1,
+    }),
+    createEmptyFabricPart({
+      name: 'Side Panels',
+      note: 'Auto from bag size',
+      lengthInInches: width,
+      widthInInches: height,
+      quantity: 2,
+    }),
+    createEmptyFabricPart({
+      name: 'Bottom Panel',
+      note: 'Auto from bag size',
+      lengthInInches: length,
+      widthInInches: width,
+      quantity: 1,
+    }),
+  ];
+}
+
+export function calculateFabricGroup(group: FabricGroup): FabricGroup {
+  const purchaseUnitInInches = purchaseUnitToInches(group.purchaseUnit);
+  const parts = group.parts.map(calculateFabricPart);
+  const requiredArea = roundToTwoDecimals(
+    parts.reduce((sum, part) => sum + part.partArea, 0)
+  );
+  const safeWidth = Math.max(1, group.fabricWidthInInches);
+  const baseRequiredLength = requiredArea / safeWidth;
+  const requiredLengthInInches = ceilToTwoDecimals(
+    baseRequiredLength * (1 + Math.max(0, group.wastagePercent) / 100)
+  );
+  const purchaseUnitsNeeded = ceilToTwoDecimals(
+    requiredLengthInInches / purchaseUnitInInches
+  );
+  const totalCost = roundToTwoDecimals(
+    purchaseUnitsNeeded * Math.max(0, group.pricePerPurchaseUnit)
+  );
+  const productsPerPurchaseUnitRaw =
+    requiredLengthInInches > 0
+      ? purchaseUnitInInches / requiredLengthInInches
+      : 0;
+  const productsPerPurchaseUnit =
+    productsPerPurchaseUnitRaw >= 1
+      ? Math.floor(productsPerPurchaseUnitRaw)
+      : roundToTwoDecimals(productsPerPurchaseUnitRaw);
+
+  return {
+    ...group,
+    purchaseUnitInInches,
+    fabricWidthInInches: safeWidth,
+    parts,
+    requiredArea,
+    requiredLengthInInches,
+    purchaseUnitsNeeded,
+    totalCost,
+    productsPerPurchaseUnit,
+  };
+}
+
+export function calculateAccessoryRow(row: AccessoryRow): AccessoryRow {
+  const costMode: CostMode = row.costMode;
+
+  if (costMode === 'weight') {
+    const purchaseWeight = Math.max(0, row.purchaseWeight);
+    const purchasePrice = Math.max(0, row.purchasePrice);
+    const weightUsedPerBag = Math.max(0, row.weightUsedPerBag);
+    const pricePerWeightUnit =
+      purchaseWeight > 0 ? roundToTwoDecimals(purchasePrice / purchaseWeight) : 0;
+    const total = roundToTwoDecimals(pricePerWeightUnit * weightUsedPerBag);
+
+    return {
+      ...row,
+      purchaseWeight,
+      purchasePrice,
+      weightUsedPerBag,
+      pricePerWeightUnit,
+      total,
+      quantityUsedPerBag: 0,
+      unitPrice: 0,
+    };
   }
-  
-  return total;
+
+  const quantityUsedPerBag = Math.max(0, row.quantityUsedPerBag);
+  const unitPrice = Math.max(0, row.unitPrice);
+  const total = roundToTwoDecimals(quantityUsedPerBag * unitPrice);
+
+  return {
+    ...row,
+    quantityUsedPerBag,
+    unitPrice,
+    total,
+    pricePerWeightUnit: 0,
+    purchaseWeight: 0,
+    purchasePrice: 0,
+    weightUsedPerBag: 0,
+  };
+}
+
+export function calculateMeasurementEstimate(
+  measurements: BagMeasurements,
+  options: {
+    purchaseUnit: PurchaseUnit;
+    fabricWidthInInches: number;
+    wastagePercent: number;
+    pricePerPurchaseUnit: number;
+  }
+) {
+  const generatedGroup = calculateFabricGroup(
+    createEmptyFabricGroup(options.fabricWidthInInches, options.pricePerPurchaseUnit, {
+      name: 'Measurement Estimate',
+      purchaseUnit: options.purchaseUnit,
+      wastagePercent: options.wastagePercent,
+      parts: createBagPartsFromMeasurements(measurements),
+    })
+  );
+
+  return generatedGroup;
+}
+
+export function calculateFabricCost(fabricGroups: FabricGroup[]): number {
+  return roundToTwoDecimals(
+    fabricGroups.reduce(
+      (sum, group) => sum + calculateFabricGroup(group).totalCost,
+      0
+    )
+  );
+}
+
+export function calculateAccessoriesCost(accessoryRows: AccessoryRow[]): number {
+  return roundToTwoDecimals(
+    accessoryRows.reduce((sum, row) => sum + calculateAccessoryRow(row).total, 0)
+  );
 }
 
 export function calculateLaborCost(rate: number, units: number): number {
-  return rate * units;
+  return roundToTwoDecimals(Math.max(0, rate) * Math.max(0, units));
 }
 
-export function calculateMasterCharge(
-  masterChargeRs: number
-): number {
-  return masterChargeRs;
+export function calculateMasterCharge(masterChargeRs: number): number {
+  return roundToTwoDecimals(Math.max(0, masterChargeRs));
 }
 
 export function calculateTotalCP(
@@ -62,45 +215,109 @@ export function calculateTotalCP(
   laborCost: number,
   masterCharge: number
 ): number {
-  return fabricCost + accessoriesCost + laborCost + masterCharge;
+  return roundToTwoDecimals(
+    fabricCost + accessoriesCost + laborCost + masterCharge
+  );
 }
 
-export function createEmptyAccessories(): Accessories {
-  return {
-    chains: { enabled: false, name: 'Chain', quantity: 0, unitPrice: 0, costPrice: 0, total: 0 },
-    buckles: { enabled: false, name: 'Buckle', quantity: 0, unitPrice: 0, costPrice: 0, total: 0 },
-    dLocks: { enabled: false, name: 'D-Lock', quantity: 0, unitPrice: 0, costPrice: 0, total: 0 },
-    gum: { enabled: false, name: 'Gum/Elastic', quantity: 0, unitPrice: 0, costPrice: 0, total: 0 },
-    flaps: { enabled: false, name: 'Flaps', quantity: 0, unitPrice: 0, costPrice: 0, total: 0 },
-    others: [],
-  };
+export function createEmptyFabricPart(overrides: Partial<FabricPart> = {}): FabricPart {
+  return calculateFabricPart({
+    id: generateId(),
+    name: '',
+    note: '',
+    lengthInInches: 0,
+    widthInInches: 0,
+    quantity: 1,
+    partArea: 0,
+    ...overrides,
+  });
 }
 
-export function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+export function createEmptyFabricGroup(
+  defaultFabricWidth = 44,
+  defaultPricePerPurchaseUnit = 500,
+  overrides: Partial<FabricGroup> = {}
+): FabricGroup {
+  return calculateFabricGroup({
+    id: generateId(),
+    name: '',
+    purchaseUnit: 'gauza',
+    purchaseUnitInInches: purchaseUnitToInches('gauza'),
+    pricePerPurchaseUnit: defaultPricePerPurchaseUnit,
+    fabricWidthInInches: defaultFabricWidth,
+    wastagePercent: 15,
+    parts: [createEmptyFabricPart({ name: 'Body Panel', note: 'Main panel' })],
+    requiredArea: 0,
+    requiredLengthInInches: 0,
+    purchaseUnitsNeeded: 0,
+    totalCost: 0,
+    productsPerPurchaseUnit: 0,
+    ...overrides,
+  });
+}
+
+export function createAccessoryRow(
+  name = '',
+  costMode: CostMode = 'quantity',
+  overrides: Partial<AccessoryRow> = {}
+): AccessoryRow {
+  return calculateAccessoryRow({
+    id: generateId(),
+    name,
+    costMode,
+    quantityUsedPerBag: 0,
+    unitPrice: 0,
+    purchaseWeight: 0,
+    purchasePrice: 0,
+    weightUsedPerBag: 0,
+    pricePerWeightUnit: 0,
+    total: 0,
+    ...overrides,
+  });
+}
+
+export function createStarterAccessoryRows(): AccessoryRow[] {
+  return [
+    createAccessoryRow('Chain'),
+    createAccessoryRow('Buckle'),
+    createAccessoryRow('D-Lock'),
+    createAccessoryRow('Gum/Elastic'),
+  ];
 }
 
 export function createProductCost(
   name: string,
-  fabric: FabricDetails & { pricePerGauza: number },
-  accessories: Accessories,
+  bagMeasurements: BagMeasurements,
+  fabricGroups: FabricGroup[],
+  accessoryRows: AccessoryRow[],
   labor: { rate: number; units: number },
   masterChargeRs: number
 ): ProductCost {
-  const fabricCost = calculateFabricCost(fabric.gauzaNeeded, fabric.pricePerGauza);
-  const accessoriesCost = calculateAccessoriesCost(accessories);
+  const calculatedFabricGroups = fabricGroups.map(calculateFabricGroup);
+  const calculatedAccessoryRows = accessoryRows.map(calculateAccessoryRow);
+  const fabricCost = calculateFabricCost(calculatedFabricGroups);
+  const accessoriesCost = calculateAccessoriesCost(calculatedAccessoryRows);
   const laborCost = calculateLaborCost(labor.rate, labor.units);
   const masterChargeAmount = calculateMasterCharge(masterChargeRs);
-  const totalCP = calculateTotalCP(fabricCost, accessoriesCost, laborCost, masterChargeAmount);
+  const totalCP = calculateTotalCP(
+    fabricCost,
+    accessoriesCost,
+    laborCost,
+    masterChargeAmount
+  );
 
   return {
     id: generateId(),
     name,
-    fabric: {
-      ...fabric,
-      totalFabricCost: fabricCost,
+    bagMeasurements,
+    fabricGroups: calculatedFabricGroups,
+    fabricSummary: {
+      totalCost: fabricCost,
     },
-    accessories,
+    accessoryRows: calculatedAccessoryRows,
+    accessorySummary: {
+      totalCost: accessoriesCost,
+    },
     labor: {
       ...labor,
       total: laborCost,

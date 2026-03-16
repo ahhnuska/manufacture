@@ -1,38 +1,64 @@
-export interface FabricDetails {
+export type PurchaseUnit = 'gauza' | 'meter' | 'yard';
+
+export type CostMode = 'quantity' | 'weight';
+
+export interface BagMeasurements {
   length: number;
   width: number;
   height: number;
-  wastagePercent: number;
-  fabricWidth: number;
-  gauzaNeeded: number;
 }
 
-export interface Accessories {
-  chains: AccessoryItem;
-  buckles: AccessoryItem;
-  dLocks: AccessoryItem;
-  gum: AccessoryItem;
-  flaps: AccessoryItem;
-  others: AccessoryItem[];
-}
-
-export interface AccessoryItem {
-  enabled: boolean;
+export interface FabricPart {
+  id: string;
   name: string;
+  note: string;
+  lengthInInches: number;
+  widthInInches: number;
   quantity: number;
+  partArea: number;
+}
+
+export interface FabricGroup {
+  id: string;
+  name: string;
+  purchaseUnit: PurchaseUnit;
+  purchaseUnitInInches: number;
+  pricePerPurchaseUnit: number;
+  fabricWidthInInches: number;
+  wastagePercent: number;
+  parts: FabricPart[];
+  requiredArea: number;
+  requiredLengthInInches: number;
+  purchaseUnitsNeeded: number;
+  totalCost: number;
+  productsPerPurchaseUnit: number;
+}
+
+export interface AccessoryRow {
+  id: string;
+  name: string;
+  costMode: CostMode;
+  quantityUsedPerBag: number;
   unitPrice: number;
-  costPrice: number;
+  purchaseWeight: number;
+  purchasePrice: number;
+  weightUsedPerBag: number;
+  pricePerWeightUnit: number;
   total: number;
 }
 
 export interface ProductCost {
   id: string;
   name: string;
-  fabric: FabricDetails & {
-    pricePerGauza: number;
-    totalFabricCost: number;
+  bagMeasurements: BagMeasurements;
+  fabricGroups: FabricGroup[];
+  fabricSummary: {
+    totalCost: number;
   };
-  accessories: Accessories;
+  accessoryRows: AccessoryRow[];
+  accessorySummary: {
+    totalCost: number;
+  };
   labor: {
     rate: number;
     units: number;
@@ -46,7 +72,7 @@ export interface ProductCost {
 export interface Settings {
   defaultPricePerGauza: number;
   defaultLaborRate: number;
-  defaultMasterCharge: number; // in NPR (Rs), not percentage
+  defaultMasterCharge: number;
   defaultFabricWidth: number;
   currency: string;
 }
@@ -76,10 +102,18 @@ export const DEFAULT_SETTINGS: Settings = {
   currency: 'NPR',
 };
 
-export const GAUZA_IN_INCHES = 36;
+export const PURCHASE_UNIT_INCHES: Record<PurchaseUnit, number> = {
+  gauza: 36,
+  meter: 39.37,
+  yard: 36,
+};
+
+export const PURCHASE_UNIT_LABELS: Record<PurchaseUnit, string> = {
+  gauza: 'Gauza',
+  meter: 'Meter',
+  yard: 'Yard',
+};
 
 export const FABRIC_WIDTH_OPTIONS = [44, 58, 60] as const;
 
 export type FabricWidth = typeof FABRIC_WIDTH_OPTIONS[number];
-
-export type AccessoryType = 'chains' | 'buckles' | 'dLocks' | 'gum' | 'others';

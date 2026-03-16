@@ -1,17 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { Settings, DEFAULT_SETTINGS } from '../../lib/types';
 import { getSettings, saveSettings } from '../../lib/storage';
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<Settings>(() => getSettings() || DEFAULT_SETTINGS);
   const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    setSettings(getSettings());
-  }, []);
 
   const handleSave = () => {
     saveSettings(settings);
@@ -60,7 +56,7 @@ export default function SettingsPage() {
           <div className="space-y-5">
             <div>
               <label className="block text-sm font-medium mb-2.5 text-zinc-700 dark:text-zinc-300">
-                Default Price per Gauza <span className="text-zinc-400 font-normal">(NPR)</span>
+                Default Fabric Price <span className="text-zinc-400 font-normal">(NPR)</span>
               </label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 font-medium">NPR</span>
@@ -75,7 +71,7 @@ export default function SettingsPage() {
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                1 Gauza = 36 inches (standard Nepali measurement)
+                Used as the default starting price for new fabric cards. Gauza = 36 inches, meter = 39.37 inches, yard = 36 inches.
               </p>
             </div>
 

@@ -1,27 +1,26 @@
 'use client';
 
-import { FabricDetails } from '../../lib/types';
+import { AccessoryRow, FabricGroup } from '../../lib/types';
 
 interface CostBreakdownProps {
+  fabricGroups: FabricGroup[];
+  accessoryRows: AccessoryRow[];
   fabricCost: number;
   accessoriesCost: number;
   laborCost: number;
   masterCharge: number;
   totalCP: number;
-  fabricDetails: FabricDetails;
-  gauzaPrice: number;
 }
 
 export default function CostBreakdown({
+  fabricGroups,
+  accessoryRows,
   fabricCost,
   accessoriesCost,
   laborCost,
   masterCharge,
   totalCP,
-  fabricDetails,
-  gauzaPrice,
 }: CostBreakdownProps) {
-
   return (
     <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-lg shadow-zinc-200/50 dark:shadow-zinc-900/50 border border-zinc-200/60 dark:border-zinc-800/60 p-6 sticky top-24 animate-fade-in delay-100">
       <div className="flex items-center gap-3 mb-6">
@@ -31,93 +30,85 @@ export default function CostBreakdown({
           </svg>
         </div>
         <div>
-          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-            Cost Breakdown
-          </h2>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Real-time calculation
-          </p>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Cost Breakdown</h2>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">Real-time totals</p>
         </div>
       </div>
 
       <div className="space-y-4">
-        <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-100 dark:border-zinc-700/50">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-            <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Fabric</h3>
+        <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/40 p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Fabric Groups</h3>
+            <span className="font-semibold text-zinc-900 dark:text-zinc-100 font-mono">
+              NPR {fabricCost.toFixed(2)}
+            </span>
           </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between text-zinc-500 dark:text-zinc-400">
-              <span>Dimensions:</span>
-              <span className="font-medium text-zinc-700 dark:text-zinc-300">{fabricDetails.length}&quot; × {fabricDetails.width}&quot; × {fabricDetails.height}&quot;</span>
-            </div>
-            <div className="flex justify-between text-zinc-500 dark:text-zinc-400">
-              <span>Wastage:</span>
-              <span className="font-medium text-zinc-700 dark:text-zinc-300">{fabricDetails.wastagePercent}%</span>
-            </div>
-            <div className="flex justify-between text-zinc-500 dark:text-zinc-400">
-              <span>Fabric Width:</span>
-              <span className="font-medium text-zinc-700 dark:text-zinc-300">{fabricDetails.fabricWidth}"</span>
-            </div>
-            <div className="flex justify-between text-zinc-500 dark:text-zinc-400">
-              <span>Gauza needed:</span>
-              <span className="font-medium text-zinc-700 dark:text-zinc-300">{fabricDetails.gauzaNeeded.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-zinc-500 dark:text-zinc-400">
-              <span>Rate:</span>
-              <span className="font-medium text-zinc-700 dark:text-zinc-300">NPR {gauzaPrice}/gauza</span>
-            </div>
-            <div className="flex justify-between pt-2.5 mt-2 border-t border-zinc-200 dark:border-zinc-700">
-              <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Fabric Cost:</span>
-              <span className="font-semibold text-zinc-900 dark:text-zinc-100 font-mono">NPR {fabricCost.toFixed(2)}</span>
-            </div>
+          <div className="space-y-3">
+            {fabricGroups.map((group) => (
+              <div key={group.id} className="rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="font-medium text-zinc-900 dark:text-zinc-100">
+                      {group.name || 'Untitled Fabric'}
+                    </div>
+                    <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                      {group.parts.length} parts • {group.fabricWidthInInches}&quot; width
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-semibold text-zinc-900 dark:text-zinc-100 font-mono">
+                      NPR {group.totalCost.toFixed(2)}
+                    </div>
+                    <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                      {group.purchaseUnitsNeeded.toFixed(2)} {group.purchaseUnit}
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+                  <div>Length needed: {group.requiredLengthInInches.toFixed(2)}&quot;</div>
+                  <div>Products / unit: {group.productsPerPurchaseUnit}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/40 p-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-100">Accessories</h3>
+            <span className="font-semibold text-zinc-900 dark:text-zinc-100 font-mono">
+              NPR {accessoriesCost.toFixed(2)}
+            </span>
+          </div>
+          <div className="space-y-2 mt-3">
+            {accessoryRows.map((row) => (
+              <div key={row.id} className="flex items-center justify-between text-sm">
+                <span className="text-zinc-600 dark:text-zinc-300">
+                  {row.name || 'Accessory'} ({row.costMode})
+                </span>
+                <span className="font-mono text-zinc-900 dark:text-zinc-100">
+                  NPR {row.total.toFixed(2)}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 
         <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-100 dark:border-zinc-700/50">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-violet-500"></div>
-            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Accessories</span>
-          </div>
-          <span className="font-semibold text-zinc-900 dark:text-zinc-100 font-mono">NPR {accessoriesCost.toFixed(2)}</span>
-        </div>
-
-        <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-100 dark:border-zinc-700/50">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Labor</span>
-          </div>
+          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Labor</span>
           <span className="font-semibold text-zinc-900 dark:text-zinc-100 font-mono">NPR {laborCost.toFixed(2)}</span>
         </div>
 
         <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-100 dark:border-zinc-700/50">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-            <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Master Charge</span>
-          </div>
+          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Master Charge</span>
           <span className="font-semibold text-zinc-900 dark:text-zinc-100 font-mono">NPR {masterCharge.toFixed(2)}</span>
         </div>
 
         <div className="p-5 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-2xl border-2 border-amber-200/60 dark:border-amber-800/60">
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-amber-800 dark:text-amber-200">
-              Total Cost Price
-            </span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-amber-700 dark:text-amber-300 font-mono tracking-tight">
-                NPR {totalCP.toFixed(2)}
-              </span>
-            </div>
+          <span className="text-sm font-medium text-amber-800 dark:text-amber-200">Total Cost Price</span>
+          <div className="mt-1 text-3xl font-bold text-amber-700 dark:text-amber-300 font-mono tracking-tight">
+            NPR {totalCP.toFixed(2)}
           </div>
-        </div>
-
-        <div className="text-xs text-zinc-400 text-center pt-2">
-          <span className="inline-flex items-center gap-1">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            1 Gauza = 36 inches (standard Nepali measurement)
-          </span>
         </div>
       </div>
     </div>

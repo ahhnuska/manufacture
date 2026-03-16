@@ -1,16 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { ProductCost } from '../../lib/types';
 import { getHistory, deleteFromHistory, clearHistory, exportToCSV } from '../../lib/storage';
 
 export default function HistoryPage() {
-  const [history, setHistory] = useState<ProductCost[]>([]);
-
-  useEffect(() => {
-    setHistory(getHistory());
-  }, []);
+  const [history, setHistory] = useState<ProductCost[]>(() => getHistory());
 
   const handleDelete = (id: string) => {
     if (confirm('Delete this record?')) {
@@ -139,17 +135,27 @@ export default function HistoryPage() {
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
                 {[
-                  { label: 'Fabric', value: product.fabric.totalFabricCost },
-                  { label: 'Accessories', value: Object.values(product.accessories).reduce((sum, a) => {
-                    if (Array.isArray(a)) return sum + a.reduce((s, i) => s + i.total, 0);
-                    return sum + (a.enabled ? a.total : 0);
-                  }, 0) },
+                  { label: 'Fabric', value: product.fabricSummary.totalCost },
+                  { label: 'Accessories', value: product.accessorySummary.totalCost },
                   { label: 'Labor', value: product.labor.total },
                   { label: 'Master Charge', value: product.masterCharge },
                 ].map((item) => (
                   <div key={item.label} className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
                     <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">{item.label}</div>
                     <div className="font-semibold text-zinc-900 dark:text-zinc-100 font-mono text-sm">NPR {item.value.toFixed(0)}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                {product.fabricGroups.map((group) => (
+                  <div key={group.id} className="p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
+                    <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+                      {group.name || 'Fabric'}
+                    </div>
+                    <div className="font-medium text-zinc-900 dark:text-zinc-100 text-sm">
+                      {group.purchaseUnitsNeeded.toFixed(2)} {group.purchaseUnit} • NPR {group.totalCost.toFixed(2)}
+                    </div>
                   </div>
                 ))}
               </div>

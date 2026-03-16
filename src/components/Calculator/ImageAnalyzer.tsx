@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import Image from 'next/image';
 import { analyzeImage, AIModel } from '../../lib/ai';
 import { FabricAnalysis } from '../../lib/types';
 
@@ -78,7 +79,14 @@ export default function ImageAnalyzer({ onAnalysisComplete, isAnalyzing, setIsAn
         <label htmlFor="image-upload" className="cursor-pointer block">
           {preview ? (
             <div className="relative">
-              <img src={preview} alt="Preview" className="max-h-56 mx-auto rounded-xl shadow-lg" />
+              <Image
+                src={preview}
+                alt="Preview"
+                width={400}
+                height={224}
+                unoptimized
+                className="max-h-56 w-auto mx-auto rounded-xl shadow-lg"
+              />
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity duration-200 rounded-xl">
                 <span className="text-white font-medium">Click to change</span>
               </div>
